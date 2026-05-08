@@ -1,0 +1,101 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ReservationStatus {
+  RESERVED
+  APPLIED
+  RELEASED   // Customer cancelled coupon or over 15 minutes without paying
+}
+
+model Coupon {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  
+  // Discount type: 'PERCENTAGE' or 'FIXED' (amount)
+  discountType    String   
+  discountValue   Decimal  @db.Decimal(10, 2)
+  
+  // Condition
+  minOrderValue   Decimal  @db.Decimal(10, 2) @default(0)
+  
+  maxUses         Int
+  currentUses     Int      @default(0)
+  
+  validFrom       DateTime
+  validUntil      DateTime
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  reservations    CouponReservation[]
+
+  @@map("coupons")
+}
+
+model CouponReservation {
+  id          String            @id @default(uuid())
+  couponId    String
+  userId      String
+  orderId     String            @unique
+  
+  status      ReservationStatus @default(RESERVED)
+  
+  expiresAt   DateTime          
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  coupon      Coupon            @relation(fields: [couponId], references: [id])
+
+  @@unique([couponId, userId, orderId])
+  @@map("coupon_reservations")
+}
+
+model Promotion {
+  id                String   @id @default(uuid())
+  name              String
+  description       String?  @db.Text
+  thumbnailUrl      String?
+  
+  discountType      String   // 'PERCENTAGE' or 'FIXED'
+  discountValue     Decimal  @db.Decimal(10, 2)
+  
+  appliedProductId  String?
+  appliedCategoryId String?
+  
+  startDate         DateTime
+  endDate           DateTime
+  isActive          Boolean  @default(true)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("promotions")
+}
+
+model OutboxEvent {
+  id          String    @id @default(uuid())
+  subject     String
+  payload     Json
+  status      String    @default("PENDING")
+  errorReason String?
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+
+  @@map("outbox_events")
+}
+
+model ProcessedEvent {
+  eventId     String   @id
+  subject     String
+  processedAt DateTime @default(now())
+
+  @@map("processed_events")
+}
