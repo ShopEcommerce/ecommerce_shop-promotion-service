@@ -2,6 +2,7 @@ import express, { RequestHandler, ErrorRequestHandler } from 'express';
 import cookieSession from 'cookie-session';
 import cors from 'cors';
 import { errorHandler, NotFoundError, correlationId, currentUser } from '@teleshop/common';
+import { promotionRouter } from './modules/promotion/promotion.route';
 
 const app = express();
 
@@ -32,6 +33,8 @@ app.use(
 );
 
 app.use(currentUser as RequestHandler);
+
+app.use('/api/promotions', promotionRouter);
 
 app.all(/.*/, () => {
   throw new NotFoundError();

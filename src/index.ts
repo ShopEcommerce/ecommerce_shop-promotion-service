@@ -2,6 +2,8 @@ import 'dotenv/config';
 import { app } from './app';
 import { rabbitmqWrapper } from '@teleshop/common';
 import pino from 'pino';
+import { PaymentCompletedListener } from './events/listeners/payment-completed-listener';
+import { startReservationExpiryWorker } from './workers/reservation-expiry.worker';
 
 const logger = pino();
 
@@ -22,6 +24,10 @@ const start = async () => {
     // Graceful Shutdown
     process.on('SIGINT', () => rabbitmqWrapper.close());
     process.on('SIGTERM', () => rabbitmqWrapper.close());
+
+    new PaymentCompletedListener(rabbitmqWrapper.channel).listen();
+
+    startReservationExpiryWorker();
 
     const port = process.env.PORT;
     app.listen(port, () => {
