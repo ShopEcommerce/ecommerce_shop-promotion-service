@@ -10,25 +10,33 @@ export const startReservationExpiryWorker = () => {
   setInterval(async () => {
     try {
       const now = new Date();
-      
+
       // Find reservations that are RESERVED and have expired
       const expiredReservations = await prisma.couponReservation.findMany({
         where: {
           status: 'RESERVED',
-          expiresAt: { lt: now }
-        }
+          expiresAt: { lt: now },
+        },
       });
 
       if (expiredReservations.length === 0) return;
 
-      logger.info(`Found ${expiredReservations.length} expired reservations. Proceeding with cleanup...`);
+      logger.info(
+        `Found ${expiredReservations.length} expired reservations. Proceeding with cleanup...`,
+      );
 
       for (const res of expiredReservations) {
         await PromotionRepository.releaseReservation(res.orderId);
-        logger.info({ orderId: res.orderId, couponId: res.couponId }, 'Successfully released reservation');
+        logger.info(
+          { orderId: res.orderId, couponId: res.couponId },
+          'Successfully released reservation',
+        );
       }
     } catch (error) {
-      logger.error({ err: error }, '[Promotion Worker] Error occurred while cleaning up expired reservations');
+      logger.error(
+        { err: error },
+        '[Promotion Worker] Error occurred while cleaning up expired reservations',
+      );
     }
-  }, 60000); 
+  }, 60000);
 };

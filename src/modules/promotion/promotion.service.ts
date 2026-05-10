@@ -2,7 +2,6 @@ import { PromotionRepository } from './promotion.repository';
 import { BadRequestError, NotFoundError } from '@teleshop/common';
 
 export class PromotionService {
-
   // Coupons
 
   static async createCoupon(data: any) {
@@ -58,7 +57,6 @@ export class PromotionService {
       throw new BadRequestError(error.message);
     }
   }
-
 
   // Promotions
 
