@@ -10,17 +10,20 @@ export class PaymentCompletedListener extends BaseListener<any> {
   subject: any = 'PaymentCompleted';
   queueGroupName = QueueGroupNames.PromotionService;
 
-  async onMessage(data: any, msg: Message) {
+  async onMessage(data: any, _msg: Message) {
     const { eventId, orderId } = data;
     const correlationId = data.correlationId || 'N/A';
 
-    logger.info({ correlationId, orderId }, 'Received signal: Payment completed. Proceeding to confirm discount code.');
-    
+    logger.info(
+      { correlationId, orderId },
+      'Received signal: Payment completed. Proceeding to confirm discount code.',
+    );
+
     try {
       if (await InboxRepository.isEventProcessed(eventId)) return;
 
       await PromotionRepository.confirmReservation(orderId).catch(() => {});
-      
+
       await InboxRepository.markAsProcessed(eventId, this.subject);
       logger.info({ orderId }, 'Successfully confirmed reservation');
     } catch (error: any) {

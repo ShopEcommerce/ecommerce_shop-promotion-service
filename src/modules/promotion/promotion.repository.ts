@@ -2,7 +2,6 @@ import { prisma } from '../../db/prisma';
 import { Prisma, ReservationStatus } from '@prisma/client';
 
 export class PromotionRepository {
-
   // Coupon
 
   static async createCoupon(data: Prisma.CouponUncheckedCreateInput) {
@@ -11,8 +10,8 @@ export class PromotionRepository {
 
   static async getCoupons(page: number, limit: number, search?: string) {
     const skip = (page - 1) * limit;
-    const whereCondition: Prisma.CouponWhereInput = search 
-      ? { code: { contains: search, mode: 'insensitive' } } 
+    const whereCondition: Prisma.CouponWhereInput = search
+      ? { code: { contains: search, mode: 'insensitive' } }
       : {};
 
     const [data, total] = await prisma.$transaction([
@@ -20,9 +19,9 @@ export class PromotionRepository {
         where: whereCondition,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
       }),
-      prisma.coupon.count({ where: whereCondition })
+      prisma.coupon.count({ where: whereCondition }),
     ]);
 
     return { data, total };
@@ -43,7 +42,7 @@ export class PromotionRepository {
   static async deleteCoupon(id: string) {
     return prisma.coupon.delete({ where: { id } });
   }
-  
+
   static async reserveCoupon(userId: string, orderId: string, code: string, orderAmount: number) {
     return prisma.$transaction(async (tx) => {
       const now = new Date();
@@ -53,8 +52,8 @@ export class PromotionRepository {
           isActive: true,
           validFrom: { lte: now },
           validUntil: { gte: now },
-          minOrderValue: { lte: orderAmount }
-        }
+          minOrderValue: { lte: orderAmount },
+        },
       });
 
       if (!coupon) throw new Error('Coupon code does not exist or is invalid');
@@ -63,11 +62,11 @@ export class PromotionRepository {
       const updateResult = await tx.coupon.updateMany({
         where: {
           id: coupon.id,
-          currentUses: { lt: coupon.maxUses } // current < max
+          currentUses: { lt: coupon.maxUses }, // current < max
         },
         data: {
-          currentUses: { increment: 1 }
-        }
+          currentUses: { increment: 1 },
+        },
       });
 
       if (updateResult.count === 0) {
@@ -83,8 +82,8 @@ export class PromotionRepository {
           userId,
           orderId,
           status: ReservationStatus.RESERVED,
-          expiresAt
-        }
+          expiresAt,
+        },
       });
 
       return { reservation, coupon };
@@ -94,7 +93,7 @@ export class PromotionRepository {
   static async confirmReservation(orderId: string) {
     return prisma.couponReservation.update({
       where: { orderId },
-      data: { status: ReservationStatus.APPLIED }
+      data: { status: ReservationStatus.APPLIED },
     });
   }
 
@@ -102,19 +101,19 @@ export class PromotionRepository {
     return prisma.$transaction(async (tx) => {
       const reservation = await tx.couponReservation.findUnique({
         where: { orderId },
-        include: { coupon: true }
+        include: { coupon: true },
       });
 
       if (!reservation || reservation.status !== ReservationStatus.RESERVED) return;
 
       await tx.coupon.update({
         where: { id: reservation.couponId },
-        data: { currentUses: { decrement: 1 } }
+        data: { currentUses: { decrement: 1 } },
       });
 
       return tx.couponReservation.update({
         where: { orderId },
-        data: { status: ReservationStatus.RELEASED }
+        data: { status: ReservationStatus.RELEASED },
       });
     });
   }
@@ -127,8 +126,8 @@ export class PromotionRepository {
 
   static async getPromotions(page: number, limit: number, search?: string) {
     const skip = (page - 1) * limit;
-    const whereCondition: Prisma.PromotionWhereInput = search 
-      ? { name: { contains: search, mode: 'insensitive' } } 
+    const whereCondition: Prisma.PromotionWhereInput = search
+      ? { name: { contains: search, mode: 'insensitive' } }
       : {};
 
     const [data, total] = await prisma.$transaction([
@@ -136,9 +135,9 @@ export class PromotionRepository {
         where: whereCondition,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
       }),
-      prisma.promotion.count({ where: whereCondition })
+      prisma.promotion.count({ where: whereCondition }),
     ]);
 
     return { data, total };
@@ -166,9 +165,9 @@ export class PromotionRepository {
         OR: [
           { appliedProductId: { in: productIds } },
           { appliedCategoryId: { in: categoryIds } },
-          { AND: [{ appliedProductId: null }, { appliedCategoryId: null }] }
-        ]
-      }
+          { AND: [{ appliedProductId: null }, { appliedCategoryId: null }] },
+        ],
+      },
     });
   }
 }

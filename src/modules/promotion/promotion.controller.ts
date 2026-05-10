@@ -5,7 +5,6 @@ import pino from 'pino';
 const logger = pino({ name: 'PromotionController' });
 
 export class PromotionController {
-
   // COUPON
 
   static async createCoupon(req: Request, res: Response) {
@@ -37,7 +36,6 @@ export class PromotionController {
     await PromotionService.deleteCoupon(req.params.id);
     res.status(200).send({ message: 'Coupon deleted successfully' });
   }
-
 
   // PROMOTION
 
