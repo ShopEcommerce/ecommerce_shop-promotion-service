@@ -4,10 +4,15 @@ import pino from 'pino';
 
 const logger = pino({ name: 'ReservationExpiryWorker' });
 
+let isProcessing = false;
+
 export const startReservationExpiryWorker = () => {
   logger.info('[Promotion Worker] Starting reservation expiry cleanup...');
 
   setInterval(async () => {
+    if (isProcessing) return;
+    isProcessing = true;
+
     try {
       const now = new Date();
 
@@ -26,17 +31,26 @@ export const startReservationExpiryWorker = () => {
       );
 
       for (const res of expiredReservations) {
-        await PromotionRepository.releaseReservation(res.orderId);
-        logger.info(
-          { orderId: res.orderId, couponId: res.couponId },
-          'Successfully released reservation',
-        );
+        try {
+          await PromotionRepository.releaseReservation(res.orderId);
+          logger.info(
+            { orderId: res.orderId, couponId: res.couponId },
+            'Successfully released reservation',
+          );
+        } catch (innerErr) {
+          logger.error(
+            { err: innerErr, orderId: res.orderId },
+            '[Promotion Worker] Failed to release specific reservation, moving to next...',
+          );
+        }
       }
     } catch (error) {
       logger.error(
         { err: error },
         '[Promotion Worker] Error occurred while cleaning up expired reservations',
       );
+    } finally {
+      isProcessing = false;
     }
   }, 60000);
 };

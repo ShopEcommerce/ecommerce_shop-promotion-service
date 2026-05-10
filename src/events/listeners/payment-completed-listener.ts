@@ -1,5 +1,5 @@
 import { Message } from 'amqplib';
-import { BaseListener, QueueGroupNames } from '@teleshop/common';
+import { BaseListener, QueueGroupNames, Subjects } from '@teleshop/common';
 import { PromotionRepository } from '../../modules/promotion/promotion.repository';
 import { InboxRepository } from '../../modules/inbox/inbox.repository'; // Import Inbox
 import pino from 'pino';
@@ -7,7 +7,7 @@ import pino from 'pino';
 const logger = pino({ name: 'Promotion-PaymentCompletedListener' });
 
 export class PaymentCompletedListener extends BaseListener<any> {
-  subject: any = 'PaymentCompleted';
+  readonly subject = Subjects.PaymentCompleted;
   queueGroupName = QueueGroupNames.PromotionService;
 
   async onMessage(data: any, _msg: Message) {
@@ -22,10 +22,18 @@ export class PaymentCompletedListener extends BaseListener<any> {
     try {
       if (await InboxRepository.isEventProcessed(eventId)) return;
 
-      await PromotionRepository.confirmReservation(orderId).catch(() => {});
+      try {
+        await PromotionRepository.confirmReservation(orderId);
+        logger.info({ orderId }, 'Successfully confirmed reservation');
+      } catch (error: any) {
+        if (error.code === 'P2025') {
+          logger.info({ orderId }, 'No coupon used for this order. Skipping.');
+        } else {
+          throw error;
+        }
+      }
 
       await InboxRepository.markAsProcessed(eventId, this.subject);
-      logger.info({ orderId }, 'Successfully confirmed reservation');
     } catch (error: any) {
       logger.error('Error occurred while confirming reservation', error);
       throw error;
