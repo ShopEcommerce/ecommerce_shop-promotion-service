@@ -9,7 +9,7 @@ export class PromotionRepository {
   }
 
   static async getCoupons(page: number, limit: number, search?: string) {
-    const skip = (page - 1) * limit;
+    const skip = (Number(page) - 1) * Number(limit);
     const whereCondition: Prisma.CouponWhereInput = search
       ? { code: { contains: search, mode: 'insensitive' } }
       : {};
@@ -18,7 +18,7 @@ export class PromotionRepository {
       prisma.coupon.findMany({
         where: whereCondition,
         skip,
-        take: limit,
+        take: Number(limit),
         orderBy: { createdAt: 'desc' },
       }),
       prisma.coupon.count({ where: whereCondition }),
