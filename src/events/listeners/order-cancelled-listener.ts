@@ -16,7 +16,9 @@ type OrderCancelledEventData = Extract<
   { subject: Subjects.OrderCancelled }
 >['data'];
 
-export class OrderCancelledListener extends BaseListener<any> {
+type OrderCancelledEvent = Extract<DomainEvent, { subject: Subjects.OrderCancelled }>;
+
+export class OrderCancelledListener extends BaseListener<OrderCancelledEvent> {
   readonly subject: Subjects.OrderCancelled = Subjects.OrderCancelled;
   queueGroupName = QueueGroupNames.PromotionService;
 
@@ -38,14 +40,17 @@ export class OrderCancelledListener extends BaseListener<any> {
       if (await InboxRepository.isEventProcessed(eventId)) return;
 
       try {
-        await PromotionRepository.releaseReservation(orderId);
-        logger.info({ orderId }, 'Coupon reservation released successfully.');
-      } catch (error: any) {
-        if (error.code === 'P2025') {
+        const reservation = await PromotionRepository.releaseReservation(orderId);
+        if (!reservation) {
           logger.info({ orderId }, 'No coupon used for this order. Skipping.');
         } else {
-          throw error;
+          logger.info(
+            { orderId, status: reservation.status },
+            'Coupon reservation released successfully.',
+          );
         }
+      } catch (error: any) {
+        throw error;
       }
 
       await InboxRepository.markAsProcessed(eventId, this.subject);

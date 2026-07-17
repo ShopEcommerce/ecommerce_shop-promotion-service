@@ -16,7 +16,9 @@ type PaymentCompletedEventData = Extract<
   { subject: Subjects.PaymentCompleted }
 >['data'];
 
-export class PaymentCompletedListener extends BaseListener<any> {
+type PaymentCompletedEvent = Extract<DomainEvent, { subject: Subjects.PaymentCompleted }>;
+
+export class PaymentCompletedListener extends BaseListener<PaymentCompletedEvent> {
   readonly subject: Subjects.PaymentCompleted = Subjects.PaymentCompleted;
   queueGroupName = QueueGroupNames.PromotionService;
 
@@ -38,14 +40,17 @@ export class PaymentCompletedListener extends BaseListener<any> {
       if (await InboxRepository.isEventProcessed(eventId)) return;
 
       try {
-        await PromotionRepository.confirmReservation(orderId);
-        logger.info({ orderId }, 'Successfully confirmed reservation');
-      } catch (error: any) {
-        if (error.code === 'P2025') {
+        const reservation = await PromotionRepository.confirmReservation(orderId);
+        if (!reservation) {
           logger.info({ orderId }, 'No coupon used for this order. Skipping.');
         } else {
-          throw error;
+          logger.info(
+            { orderId, status: reservation.status },
+            'Successfully handled payment completion for reservation',
+          );
         }
+      } catch (error: any) {
+        throw error;
       }
 
       await InboxRepository.markAsProcessed(eventId, this.subject);

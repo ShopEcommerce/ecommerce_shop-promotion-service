@@ -140,7 +140,39 @@ describe('PromotionRepository integration', () => {
 
       const updated = await PromotionRepository.confirmReservation(orderId);
 
+      expect(updated).not.toBeNull();
+      if (!updated) {
+        throw new Error('Expected reservation to be confirmed');
+      }
       expect(updated.status).toBe('APPLIED');
+    });
+
+    it('does not fail when confirming an already applied reservation', async () => {
+      const coupon = await prisma.coupon.create({
+        data: buildCouponData({ code: 'PAY20' }),
+      });
+      const orderId = crypto.randomUUID();
+
+      await prisma.couponReservation.create({
+        data: {
+          id: crypto.randomUUID(),
+          couponId: coupon.id,
+          userId: 'user-1',
+          orderId,
+          status: 'APPLIED',
+          expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+        },
+      });
+
+      const result = await PromotionRepository.confirmReservation(orderId);
+
+      expect(result?.status).toBe('APPLIED');
+    });
+
+    it('returns null when confirming a reservation that does not exist', async () => {
+      const result = await PromotionRepository.confirmReservation(crypto.randomUUID());
+
+      expect(result).toBeNull();
     });
 
     it('releases a reserved coupon and decrements currentUses', async () => {
