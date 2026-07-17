@@ -1,20 +1,12 @@
 import { Message } from 'amqplib';
-import {
-  BaseListener,
-  DomainEvent,
-  QueueGroupNames,
-  Subjects,
-} from '@teleshop/common';
+import { BaseListener, DomainEvent, QueueGroupNames, Subjects } from '@teleshop/common';
 import { PromotionRepository } from '../../modules/promotion/promotion.repository';
 import { InboxRepository } from '../../modules/inbox/inbox.repository';
 import pino from 'pino';
 
 const logger = pino({ name: 'Promotion-OrderCancelledListener' });
 
-type OrderCancelledEventData = Extract<
-  DomainEvent,
-  { subject: Subjects.OrderCancelled }
->['data'];
+type OrderCancelledEventData = Extract<DomainEvent, { subject: Subjects.OrderCancelled }>['data'];
 
 type OrderCancelledEvent = Extract<DomainEvent, { subject: Subjects.OrderCancelled }>;
 

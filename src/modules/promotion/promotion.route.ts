@@ -38,7 +38,11 @@ router.put(
   validateZod(updateCouponSchema),
   asyncHandler(PromotionController.updateCoupon as any),
 );
-router.delete('/coupons/:id', requireAdminMw, asyncHandler(PromotionController.deleteCoupon as any));
+router.delete(
+  '/coupons/:id',
+  requireAdminMw,
+  asyncHandler(PromotionController.deleteCoupon as any),
+);
 
 router.post(
   '/',

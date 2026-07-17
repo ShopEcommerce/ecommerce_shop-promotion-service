@@ -17,9 +17,7 @@ const buildCouponData = (overrides: Partial<Prisma.CouponUncheckedCreateInput> =
   ...overrides,
 });
 
-const buildPromotionData = (
-  overrides: Partial<Prisma.PromotionUncheckedCreateInput> = {},
-) => ({
+const buildPromotionData = (overrides: Partial<Prisma.PromotionUncheckedCreateInput> = {}) => ({
   id: crypto.randomUUID(),
   name: `Promo-${crypto.randomUUID().slice(0, 8)}`,
   description: 'Integration test promotion',

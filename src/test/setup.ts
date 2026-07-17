@@ -1,6 +1,8 @@
 process.env.JWT_SECRET = 'test-secret-key-for-jest';
-process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/promotion_db?schema=public';
-const { closePrisma } = require('../db/prisma');
+process.env.DATABASE_URL =
+  'postgresql://postgres:postgres@localhost:5432/promotion_db?schema=public';
+
+let closePrisma: () => Promise<void>;
 
 jest.mock('@teleshop/common', () => {
   const originalModule = jest.requireActual('@teleshop/common');
@@ -18,6 +20,10 @@ jest.mock('@teleshop/common', () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+});
+
+beforeAll(async () => {
+  ({ closePrisma } = await import('../db/prisma'));
 });
 
 afterAll(async () => {

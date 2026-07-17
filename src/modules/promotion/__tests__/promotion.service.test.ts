@@ -127,9 +127,7 @@ describe('PromotionService', () => {
     it('throws when coupon to update does not exist', async () => {
       (PromotionRepository.getCouponById as jest.Mock).mockResolvedValue(null);
 
-      await expect(PromotionService.updateCoupon(couponId, {})).rejects.toThrow(
-        'Coupon not found',
-      );
+      await expect(PromotionService.updateCoupon(couponId, {})).rejects.toThrow('Coupon not found');
       expect(PromotionRepository.updateCoupon).not.toHaveBeenCalled();
     });
 
@@ -143,9 +141,9 @@ describe('PromotionService', () => {
         code: 'WELCOME20',
       });
 
-      await expect(
-        PromotionService.updateCoupon(couponId, { code: 'WELCOME20' }),
-      ).rejects.toThrow('This coupon code is already in use');
+      await expect(PromotionService.updateCoupon(couponId, { code: 'WELCOME20' })).rejects.toThrow(
+        'This coupon code is already in use',
+      );
       expect(PromotionRepository.updateCoupon).not.toHaveBeenCalled();
     });
   });

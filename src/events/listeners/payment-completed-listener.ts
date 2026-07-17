@@ -1,10 +1,5 @@
 import { Message } from 'amqplib';
-import {
-  BaseListener,
-  DomainEvent,
-  QueueGroupNames,
-  Subjects,
-} from '@teleshop/common';
+import { BaseListener, DomainEvent, QueueGroupNames, Subjects } from '@teleshop/common';
 import { PromotionRepository } from '../../modules/promotion/promotion.repository';
 import { InboxRepository } from '../../modules/inbox/inbox.repository'; // Import Inbox
 import pino from 'pino';
