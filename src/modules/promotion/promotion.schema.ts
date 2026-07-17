@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const createCouponSchema = z.object({
   body: z
     .object({
-      code: z.string().min(3, 'Code must be at least 3 characters long').toUpperCase(),
+      code: z.string().trim().min(3, 'Code must be at least 3 characters long').toUpperCase(),
       discountType: z.enum(['PERCENTAGE', 'FIXED'], {
         error: 'Discount type must be either PERCENTAGE or FIXED',
       }),
@@ -18,6 +18,21 @@ export const createCouponSchema = z.object({
       message: 'End date must be after start date',
       path: ['validUntil'],
     }),
+});
+
+export const updateCouponSchema = z.object({
+  body: createCouponSchema.shape.body.partial().refine(
+    (data) => {
+      if (data.validFrom && data.validUntil) {
+        return new Date(data.validFrom) < new Date(data.validUntil);
+      }
+      return true;
+    },
+    {
+      message: 'End date must be after start date',
+      path: ['validUntil'],
+    },
+  ),
 });
 
 export const createPromotionSchema = z.object({
@@ -40,9 +55,24 @@ export const createPromotionSchema = z.object({
     }),
 });
 
+export const updatePromotionSchema = z.object({
+  body: createPromotionSchema.shape.body.partial().refine(
+    (data) => {
+      if (data.startDate && data.endDate) {
+        return new Date(data.startDate) < new Date(data.endDate);
+      }
+      return true;
+    },
+    {
+      message: 'End date must be after start date',
+      path: ['endDate'],
+    },
+  ),
+});
+
 export const reserveCouponSchema = z.object({
   body: z.object({
-    code: z.string(),
+    code: z.string().trim().min(3).toUpperCase(),
     orderId: z.string().uuid(),
     orderAmount: z.number().positive(),
   }),

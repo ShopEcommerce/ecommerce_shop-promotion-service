@@ -3,6 +3,7 @@ import { app } from './app';
 import { rabbitmqWrapper } from '@teleshop/common';
 import pino from 'pino';
 import { PaymentCompletedListener } from './events/listeners/payment-completed-listener';
+import { OrderCancelledListener } from './events/listeners/order-cancelled-listener';
 import { startReservationExpiryWorker } from './workers/reservation-expiry.worker';
 
 const logger = pino();
@@ -26,6 +27,7 @@ const start = async () => {
     process.on('SIGTERM', () => rabbitmqWrapper.close());
 
     new PaymentCompletedListener(rabbitmqWrapper.channel).listen();
+    new OrderCancelledListener(rabbitmqWrapper.channel).listen();
 
     startReservationExpiryWorker();
 

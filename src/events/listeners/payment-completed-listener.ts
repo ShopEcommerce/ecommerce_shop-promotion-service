@@ -1,18 +1,30 @@
 import { Message } from 'amqplib';
-import { BaseListener, QueueGroupNames, Subjects } from '@teleshop/common';
+import { BaseListener, DomainEvent, QueueGroupNames, Subjects } from '@teleshop/common';
 import { PromotionRepository } from '../../modules/promotion/promotion.repository';
 import { InboxRepository } from '../../modules/inbox/inbox.repository'; // Import Inbox
 import pino from 'pino';
 
 const logger = pino({ name: 'Promotion-PaymentCompletedListener' });
 
-export class PaymentCompletedListener extends BaseListener<any> {
-  readonly subject = Subjects.PaymentCompleted;
+type PaymentCompletedEventData = Extract<
+  DomainEvent,
+  { subject: Subjects.PaymentCompleted }
+>['data'];
+
+type PaymentCompletedEvent = Extract<DomainEvent, { subject: Subjects.PaymentCompleted }>;
+
+export class PaymentCompletedListener extends BaseListener<PaymentCompletedEvent> {
+  readonly subject: Subjects.PaymentCompleted = Subjects.PaymentCompleted;
   queueGroupName = QueueGroupNames.PromotionService;
 
-  async onMessage(data: any, _msg: Message) {
-    const { eventId, orderId } = data;
+  async onMessage(data: PaymentCompletedEventData, _msg: Message) {
+    const eventId = data.id || (data as any).eventId;
+    const { orderId } = data;
     const correlationId = data.correlationId || 'N/A';
+
+    if (!eventId || !orderId) {
+      throw new Error('Invalid PaymentCompleted payload: missing event identifier or orderId');
+    }
 
     logger.info(
       { correlationId, orderId },
@@ -23,19 +35,22 @@ export class PaymentCompletedListener extends BaseListener<any> {
       if (await InboxRepository.isEventProcessed(eventId)) return;
 
       try {
-        await PromotionRepository.confirmReservation(orderId);
-        logger.info({ orderId }, 'Successfully confirmed reservation');
-      } catch (error: any) {
-        if (error.code === 'P2025') {
+        const reservation = await PromotionRepository.confirmReservation(orderId);
+        if (!reservation) {
           logger.info({ orderId }, 'No coupon used for this order. Skipping.');
         } else {
-          throw error;
+          logger.info(
+            { orderId, status: reservation.status },
+            'Successfully handled payment completion for reservation',
+          );
         }
+      } catch (error: any) {
+        throw error;
       }
 
       await InboxRepository.markAsProcessed(eventId, this.subject);
     } catch (error: any) {
-      logger.error('Error occurred while confirming reservation', error);
+      logger.error({ error }, 'Error occurred while confirming reservation');
       throw error;
     }
   }

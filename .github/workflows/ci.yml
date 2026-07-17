@@ -11,48 +11,59 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout promotion-service
-        uses: actions/checkout@v3
-        with:
-          path: promotion-service
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Checkout shared repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ShopEcommerce/ecommerce_shop-shared
           path: shared
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '22.x'
           cache: 'npm'
-          cache-dependency-path: 'promotion-service/package-lock.json'
+          cache-dependency-path: 'package-lock.json'
 
       - name: Build Shared Library
         run: |
           cd shared
-          npm install
+          npm install --cache .npm-cache
           npm run build
-          npm pack
+          npm pack --cache .npm-cache
 
       - name: Install Dependencies
         run: |
-          cd promotion-service
-          npm install ../shared/teleshop-common-1.0.0.tgz
-          npm install
+          npm install ./shared/teleshop-common-1.0.4.tgz --cache .npm-cache
+          npm install --cache .npm-cache
 
       - name: Generate Prisma Client
         run: |
-          cd promotion-service
           npx prisma generate
+
+      - name: Setup Postgres for tests
+        uses: harmon758/postgresql-action@v1
+        with:
+          postgresql db: promotion_db
+          postgresql user: postgres
+          postgresql password: postgres
+          postgresql host: localhost
+          postgresql port: 5432
+
+      - name: Run Database Migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/promotion_db?schema=public
+        run: |
+          npm run prisma:migrate:deploy
 
       - name: Run Linter
         run: |
-          cd promotion-service
           npm run lint
 
       - name: Run Unit Tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/promotion_db?schema=public
         run: |
-          cd promotion-service
           npm run test:ci

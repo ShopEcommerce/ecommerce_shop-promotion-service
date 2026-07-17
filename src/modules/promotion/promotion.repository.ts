@@ -91,9 +91,26 @@ export class PromotionRepository {
   }
 
   static async confirmReservation(orderId: string) {
-    return prisma.couponReservation.update({
-      where: { orderId },
-      data: { status: ReservationStatus.APPLIED },
+    return prisma.$transaction(async (tx) => {
+      const reservation = await tx.couponReservation.findUnique({
+        where: { orderId },
+      });
+
+      if (!reservation) return null;
+      if (reservation.status === ReservationStatus.APPLIED) return reservation;
+      if (reservation.status !== ReservationStatus.RESERVED) return reservation;
+
+      await tx.couponReservation.updateMany({
+        where: {
+          orderId,
+          status: ReservationStatus.RESERVED,
+        },
+        data: { status: ReservationStatus.APPLIED },
+      });
+
+      return tx.couponReservation.findUnique({
+        where: { orderId },
+      });
     });
   }
 
@@ -101,19 +118,27 @@ export class PromotionRepository {
     return prisma.$transaction(async (tx) => {
       const reservation = await tx.couponReservation.findUnique({
         where: { orderId },
-        include: { coupon: true },
       });
 
       if (!reservation || reservation.status !== ReservationStatus.RESERVED) return;
+
+      const updateReservationResult = await tx.couponReservation.updateMany({
+        where: {
+          orderId,
+          status: ReservationStatus.RESERVED,
+        },
+        data: { status: ReservationStatus.RELEASED },
+      });
+
+      if (updateReservationResult.count === 0) return;
 
       await tx.coupon.update({
         where: { id: reservation.couponId },
         data: { currentUses: { decrement: 1 } },
       });
 
-      return tx.couponReservation.update({
+      return tx.couponReservation.findUnique({
         where: { orderId },
-        data: { status: ReservationStatus.RELEASED },
       });
     });
   }

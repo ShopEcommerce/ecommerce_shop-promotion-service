@@ -2,8 +2,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY shared/teleshop-common-1.0.0.tgz ./shared/
-COPY shared/teleshop-common-1.0.3.tgz ./shared/
+COPY shared/teleshop-common-1.0.4.tgz ./shared/
 COPY promotion-service/package*.json ./promotion-service/
 
 WORKDIR /app/promotion-service
