@@ -1,18 +1,33 @@
 import { Message } from 'amqplib';
-import { BaseListener, QueueGroupNames, Subjects } from '@teleshop/common';
+import {
+  BaseListener,
+  DomainEvent,
+  QueueGroupNames,
+  Subjects,
+} from '@teleshop/common';
 import { PromotionRepository } from '../../modules/promotion/promotion.repository';
 import { InboxRepository } from '../../modules/inbox/inbox.repository'; // Import Inbox
 import pino from 'pino';
 
 const logger = pino({ name: 'Promotion-PaymentCompletedListener' });
 
+type PaymentCompletedEventData = Extract<
+  DomainEvent,
+  { subject: Subjects.PaymentCompleted }
+>['data'];
+
 export class PaymentCompletedListener extends BaseListener<any> {
-  readonly subject = Subjects.PaymentCompleted;
+  readonly subject: Subjects.PaymentCompleted = Subjects.PaymentCompleted;
   queueGroupName = QueueGroupNames.PromotionService;
 
-  async onMessage(data: any, _msg: Message) {
-    const { eventId, orderId } = data;
+  async onMessage(data: PaymentCompletedEventData, _msg: Message) {
+    const eventId = data.id || (data as any).eventId;
+    const { orderId } = data;
     const correlationId = data.correlationId || 'N/A';
+
+    if (!eventId || !orderId) {
+      throw new Error('Invalid PaymentCompleted payload: missing event identifier or orderId');
+    }
 
     logger.info(
       { correlationId, orderId },
@@ -35,7 +50,7 @@ export class PaymentCompletedListener extends BaseListener<any> {
 
       await InboxRepository.markAsProcessed(eventId, this.subject);
     } catch (error: any) {
-      logger.error('Error occurred while confirming reservation', error);
+      logger.error({ error }, 'Error occurred while confirming reservation');
       throw error;
     }
   }

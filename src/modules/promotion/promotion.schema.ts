@@ -20,6 +20,21 @@ export const createCouponSchema = z.object({
     }),
 });
 
+export const updateCouponSchema = z.object({
+  body: createCouponSchema.shape.body.partial().refine(
+    (data) => {
+      if (data.validFrom && data.validUntil) {
+        return new Date(data.validFrom) < new Date(data.validUntil);
+      }
+      return true;
+    },
+    {
+      message: 'End date must be after start date',
+      path: ['validUntil'],
+    },
+  ),
+});
+
 export const createPromotionSchema = z.object({
   body: z
     .object({
@@ -38,6 +53,21 @@ export const createPromotionSchema = z.object({
       message: 'End date must be after start date',
       path: ['endDate'],
     }),
+});
+
+export const updatePromotionSchema = z.object({
+  body: createPromotionSchema.shape.body.partial().refine(
+    (data) => {
+      if (data.startDate && data.endDate) {
+        return new Date(data.startDate) < new Date(data.endDate);
+      }
+      return true;
+    },
+    {
+      message: 'End date must be after start date',
+      path: ['endDate'],
+    },
+  ),
 });
 
 export const reserveCouponSchema = z.object({
