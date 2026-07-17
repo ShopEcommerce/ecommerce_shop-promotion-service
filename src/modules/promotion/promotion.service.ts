@@ -1,19 +1,40 @@
 import { PromotionRepository } from './promotion.repository';
 import { BadRequestError, NotFoundError } from '@teleshop/common';
+import { z } from 'zod';
+import { Prisma } from '@prisma/client';
+import {
+  createCouponSchema,
+  createPromotionSchema,
+  updateCouponSchema,
+  updatePromotionSchema,
+} from './promotion.schema';
+
+type CreateCouponInput = z.infer<typeof createCouponSchema>['body'];
+type UpdateCouponInput = z.infer<typeof updateCouponSchema>['body'];
+type CreatePromotionInput = z.infer<typeof createPromotionSchema>['body'];
+type UpdatePromotionInput = z.infer<typeof updatePromotionSchema>['body'];
+
+const normalizeCouponCode = (code: string) => code.trim().toUpperCase();
 
 export class PromotionService {
+  private static parseDate(dateValue: string) {
+    return new Date(dateValue);
+  }
+
   // Coupons
 
-  static async createCoupon(data: any) {
-    const existing = await PromotionRepository.getCouponByCode(data.code);
+  static async createCoupon(data: CreateCouponInput) {
+    const normalizedCode = normalizeCouponCode(data.code);
+    const existing = await PromotionRepository.getCouponByCode(normalizedCode);
     if (existing) {
-      throw new BadRequestError(`Coupon code ${data.code} already exists`);
+      throw new BadRequestError(`Coupon code ${normalizedCode} already exists`);
     }
 
-    const payload = {
+    const payload: Prisma.CouponUncheckedCreateInput = {
       ...data,
-      validFrom: new Date(data.validFrom),
-      validUntil: new Date(data.validUntil),
+      code: normalizedCode,
+      validFrom: this.parseDate(data.validFrom),
+      validUntil: this.parseDate(data.validUntil),
     };
     return PromotionRepository.createCoupon(payload);
   }
@@ -28,18 +49,21 @@ export class PromotionService {
     return coupon;
   }
 
-  static async updateCoupon(id: string, data: any) {
+  static async updateCoupon(id: string, data: UpdateCouponInput) {
     const existing = await PromotionRepository.getCouponById(id);
     if (!existing) throw new NotFoundError('Coupon not found');
 
-    if (data.code && data.code !== existing.code) {
-      const codeExists = await PromotionRepository.getCouponByCode(data.code);
+    const normalizedCode = data.code ? normalizeCouponCode(data.code) : undefined;
+
+    if (normalizedCode && normalizedCode !== existing.code) {
+      const codeExists = await PromotionRepository.getCouponByCode(normalizedCode);
       if (codeExists) throw new BadRequestError('This coupon code is already in use');
     }
 
-    const payload = { ...data };
-    if (data.validFrom) payload.validFrom = new Date(data.validFrom);
-    if (data.validUntil) payload.validUntil = new Date(data.validUntil);
+    const payload: Prisma.CouponUpdateInput = { ...data };
+    if (normalizedCode) payload.code = normalizedCode;
+    if (data.validFrom) payload.validFrom = this.parseDate(data.validFrom);
+    if (data.validUntil) payload.validUntil = this.parseDate(data.validUntil);
 
     return PromotionRepository.updateCoupon(id, payload);
   }
@@ -52,7 +76,12 @@ export class PromotionService {
 
   static async reserveCoupon(userId: string, orderId: string, code: string, orderAmount: number) {
     try {
-      return await PromotionRepository.reserveCoupon(userId, orderId, code, orderAmount);
+      return await PromotionRepository.reserveCoupon(
+        userId,
+        orderId,
+        normalizeCouponCode(code),
+        orderAmount,
+      );
     } catch (error: any) {
       throw new BadRequestError(error.message);
     }
@@ -60,11 +89,11 @@ export class PromotionService {
 
   // Promotions
 
-  static async createPromotion(data: any) {
-    const payload = {
+  static async createPromotion(data: CreatePromotionInput) {
+    const payload: Prisma.PromotionUncheckedCreateInput = {
       ...data,
-      startDate: new Date(data.startDate),
-      endDate: new Date(data.endDate),
+      startDate: this.parseDate(data.startDate),
+      endDate: this.parseDate(data.endDate),
     };
     return PromotionRepository.createPromotion(payload);
   }
@@ -79,13 +108,13 @@ export class PromotionService {
     return promotion;
   }
 
-  static async updatePromotion(id: string, data: any) {
+  static async updatePromotion(id: string, data: UpdatePromotionInput) {
     const existing = await PromotionRepository.getPromotionById(id);
     if (!existing) throw new NotFoundError('Promotion not found');
 
-    const payload = { ...data };
-    if (data.startDate) payload.startDate = new Date(data.startDate);
-    if (data.endDate) payload.endDate = new Date(data.endDate);
+    const payload: Prisma.PromotionUpdateInput = { ...data };
+    if (data.startDate) payload.startDate = this.parseDate(data.startDate);
+    if (data.endDate) payload.endDate = this.parseDate(data.endDate);
 
     return PromotionRepository.updatePromotion(id, payload);
   }

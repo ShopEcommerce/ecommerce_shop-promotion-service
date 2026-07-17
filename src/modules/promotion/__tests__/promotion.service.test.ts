@@ -9,7 +9,7 @@ describe('PromotionService', () => {
 
   const couponInput = {
     code: 'WELCOME10',
-    discountType: 'PERCENTAGE',
+    discountType: 'PERCENTAGE' as const,
     discountValue: 10,
     minOrderValue: 100000,
     maxUses: 50,
@@ -22,7 +22,7 @@ describe('PromotionService', () => {
     name: 'Summer Phone Sale',
     description: 'Discount for phone category',
     thumbnailUrl: 'https://example.com/promo.png',
-    discountType: 'PERCENTAGE',
+    discountType: 'PERCENTAGE' as const,
     discountValue: 15,
     appliedProductId: null,
     appliedCategoryId: '33333333-3333-3333-3333-333333333333',
@@ -54,6 +54,24 @@ describe('PromotionService', () => {
         }),
       );
       expect(result.id).toBe(couponId);
+    });
+
+    it('normalizes coupon code before checking duplicates and saving', async () => {
+      (PromotionRepository.getCouponByCode as jest.Mock).mockResolvedValue(null);
+      (PromotionRepository.createCoupon as jest.Mock).mockImplementation(async (payload) => ({
+        id: couponId,
+        ...payload,
+      }));
+
+      await PromotionService.createCoupon({
+        ...couponInput,
+        code: ' welcome10 ',
+      });
+
+      expect(PromotionRepository.getCouponByCode).toHaveBeenCalledWith('WELCOME10');
+      expect(PromotionRepository.createCoupon).toHaveBeenCalledWith(
+        expect.objectContaining({ code: 'WELCOME10' }),
+      );
     });
 
     it('throws when coupon code already exists', async () => {
@@ -154,6 +172,22 @@ describe('PromotionService', () => {
       await expect(
         PromotionService.reserveCoupon('user-1', 'order-1', couponInput.code, 250000),
       ).resolves.toEqual(reservationResult);
+    });
+
+    it('normalizes coupon code before reserving', async () => {
+      (PromotionRepository.reserveCoupon as jest.Mock).mockResolvedValue({
+        reservation: { orderId: 'order-1', userId: 'user-1' },
+        coupon: { id: couponId, code: couponInput.code },
+      });
+
+      await PromotionService.reserveCoupon('user-1', 'order-1', ' welcome10 ', 250000);
+
+      expect(PromotionRepository.reserveCoupon).toHaveBeenCalledWith(
+        'user-1',
+        'order-1',
+        'WELCOME10',
+        250000,
+      );
     });
 
     it('wraps repository errors as BadRequestError', async () => {

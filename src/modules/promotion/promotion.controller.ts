@@ -3,6 +3,10 @@ import { PromotionService } from './promotion.service';
 import pino from 'pino';
 
 const logger = pino({ name: 'PromotionController' });
+const parsePositiveInt = (value: string | undefined, fallback: number) => {
+  const parsed = Number.parseInt(value || '', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
 
 export class PromotionController {
   // COUPON
@@ -14,12 +18,15 @@ export class PromotionController {
   }
 
   static async getCoupons(req: Request, res: Response) {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const page = parsePositiveInt(req.query.page as string | undefined, 1);
+    const limit = parsePositiveInt(req.query.limit as string | undefined, 10);
     const search = req.query.search as string;
 
     const result = await PromotionService.getAllCoupons(page, limit, search);
-    res.status(200).send({ data: result.data, meta: { page, limit, total: result.total } });
+    res.status(200).send({
+      data: result.data,
+      meta: { page, limit, total: result.total, totalPages: Math.ceil(result.total / limit) || 1 },
+    });
   }
 
   static async getCouponById(req: Request<{ id: string }>, res: Response) {
@@ -45,12 +52,15 @@ export class PromotionController {
   }
 
   static async getPromotions(req: Request, res: Response) {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const page = parsePositiveInt(req.query.page as string | undefined, 1);
+    const limit = parsePositiveInt(req.query.limit as string | undefined, 10);
     const search = req.query.search as string;
 
     const result = await PromotionService.getAllPromotions(page, limit, search);
-    res.status(200).send({ data: result.data, meta: { page, limit, total: result.total } });
+    res.status(200).send({
+      data: result.data,
+      meta: { page, limit, total: result.total, totalPages: Math.ceil(result.total / limit) || 1 },
+    });
   }
 
   static async getPromotionById(req: Request<{ id: string }>, res: Response) {

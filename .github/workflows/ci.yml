@@ -43,10 +43,27 @@ jobs:
         run: |
           npx prisma generate
 
+      - name: Setup Postgres for tests
+        uses: harmon758/postgresql-action@v1
+        with:
+          postgresql db: promotion_db
+          postgresql user: postgres
+          postgresql password: postgres
+          postgresql host: localhost
+          postgresql port: 5432
+
+      - name: Run Database Migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/promotion_db?schema=public
+        run: |
+          npm run prisma:migrate:deploy
+
       - name: Run Linter
         run: |
           npm run lint
 
       - name: Run Unit Tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/promotion_db?schema=public
         run: |
           npm run test:ci

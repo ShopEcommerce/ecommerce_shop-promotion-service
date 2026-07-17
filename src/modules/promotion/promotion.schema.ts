@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const createCouponSchema = z.object({
   body: z
     .object({
-      code: z.string().min(3, 'Code must be at least 3 characters long').toUpperCase(),
+      code: z.string().trim().min(3, 'Code must be at least 3 characters long').toUpperCase(),
       discountType: z.enum(['PERCENTAGE', 'FIXED'], {
         error: 'Discount type must be either PERCENTAGE or FIXED',
       }),
@@ -72,7 +72,7 @@ export const updatePromotionSchema = z.object({
 
 export const reserveCouponSchema = z.object({
   body: z.object({
-    code: z.string(),
+    code: z.string().trim().min(3).toUpperCase(),
     orderId: z.string().uuid(),
     orderAmount: z.number().positive(),
   }),
